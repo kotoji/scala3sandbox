@@ -8,7 +8,10 @@ lazy val root = project
   .in(file("."))
   .settings(
     name := "scala3sandbox",
-    libraryDependencies += "org.scalameta" %% "munit" % "0.7.29" % Test
+    libraryDependencies ++= Seq(
+      "org.typelevel" %% "cats-effect" % "3.4.5",
+      "org.scalameta" %% "munit" % "0.7.29" % Test
+    )
   )
 
 lazy val fpscala = project
