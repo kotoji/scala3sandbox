@@ -11,6 +11,7 @@ import cats.effect.kernel.Sync
 import cats.effect.std.Console
 import cats.ApplicativeError
 import cats.syntax.all._
+import java.io.FileNotFoundException
 
 object FileCopy {
   def run[F[_]: Sync: Console](
@@ -18,15 +19,37 @@ object FileCopy {
   )(using F: ApplicativeError[F, Throwable]): F[ExitCode] =
     for {
       _ <-
-        if (args.length < 2)
-          F.raiseError(new IllegalArgumentException("Need origin and destination files")).void
-        else
-          F.unit
-      orig = new File(args(0))
-      dest = new File(args(1))
+        F.whenA(args.length < 2)(
+          F.raiseError(new IllegalArgumentException("Need origin and destination files"))
+        )
+      orig <- Sync[F].blocking(new File(args(0)))
+      dest <- Sync[F].blocking(new File(args(1)))
+      _ <- checkFiles(orig, dest)
       count <- copy(orig, dest)
       _ <- Console[F].println(s"$count bytes copied from ${orig.getPath} to ${dest.getPath}")
     } yield ExitCode.Success
+
+  def checkFiles[F[_]: Sync: Console](orig: File, dest: File)(using
+      F: ApplicativeError[F, Throwable]
+  ): F[Unit] = for {
+    _ <- F.whenA(orig.getName == dest.getName)(
+      F.raiseError(new IllegalArgumentException("Origin and destination files are the same"))
+    )
+    isOrigExists <- Sync[F].blocking(orig.exists)
+    _ <-
+      F.unlessA(isOrigExists)(
+        F.raiseError(new FileNotFoundException(s"Origin file ${orig.getPath} does not exist"))
+      )
+    isDestExists <- Sync[F].blocking(dest.exists)
+    isCont <-
+      if (isDestExists) {
+        Console[F].println(
+          s"Destination file ${dest.getPath} already exists, overwrite? (y/n)"
+        )
+          >> Console[F].readLine map { _.toLowerCase == "y" }
+      } else Sync[F].pure(true)
+    _ <- F.unlessA(isCont)(F.raiseError(new RuntimeException("Aborted")))
+  } yield ()
 
   def inputStream[F[_]: Sync](
       f: File
@@ -58,7 +81,7 @@ object FileCopy {
     } yield (inStream, outStream)
 
   def transfer[F[_]: Sync](origin: InputStream, destination: OutputStream): F[Long] = {
-    def go[F[_]: Sync](org: InputStream, dst: OutputStream, buf: Array[Byte], acc: Long): F[Long] =
+    def go(org: InputStream, dst: OutputStream, buf: Array[Byte], acc: Long): F[Long] =
       for {
         amount <- Sync[F].blocking(org.read(buf, 0, buf.length))
         count <-
