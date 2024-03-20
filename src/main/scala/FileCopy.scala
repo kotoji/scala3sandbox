@@ -80,7 +80,11 @@ object FileCopy {
       outStream <- outputStream(out)
     } yield (inStream, outStream)
 
-  def transfer[F[_]: Sync](origin: InputStream, destination: OutputStream): F[Long] = {
+  def transfer[F[_]: Sync](
+      origin: InputStream,
+      destination: OutputStream,
+      bufferSize: Int = 1024 * 10
+  ): F[Long] = {
     def go(org: InputStream, dst: OutputStream, buf: Array[Byte], acc: Long): F[Long] =
       for {
         amount <- Sync[F].blocking(org.read(buf, 0, buf.length))
@@ -92,7 +96,7 @@ object FileCopy {
           }
       } yield count
 
-    go(origin, destination, new Array[Byte](1024 * 10), 0L)
+    go(origin, destination, new Array[Byte](bufferSize), 0L)
   }
 
   def copy[F[_]: Sync](origin: File, destination: File): F[Long] =
