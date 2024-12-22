@@ -5,6 +5,8 @@ ThisBuild / version := "0.1.0-SNAPSHOT"
 ThisBuild / scalaVersion := scala3Version
 
 val AIRFRAME_VERSION = "24.9.2"
+val FS2_VERSION = "3.11.0"
+val http4sVersion = "0.23.29"
 
 lazy val root = project
   .in(file("."))
@@ -31,8 +33,16 @@ lazy val root = project
       "org.wvlet.airframe" %% "airframe-rx" % AIRFRAME_VERSION, // ReactiveX interface
       "org.wvlet.airframe" %% "airframe-rx-html" % AIRFRAME_VERSION, // Reactive DOM
       "org.wvlet.airframe" %% "airframe-surface" % AIRFRAME_VERSION, // Object surface inspector
-      "org.wvlet.airframe" %% "airframe-ulid" % AIRFRAME_VERSION // ULID generator
-    )
+      "org.wvlet.airframe" %% "airframe-ulid" % AIRFRAME_VERSION, // ULID generator
+      "co.fs2" %% "fs2-core" % FS2_VERSION,
+      "co.fs2" %% "fs2-io" % FS2_VERSION,
+      "co.fs2" %% "fs2-reactive-streams" % FS2_VERSION,
+      "co.fs2" %% "fs2-scodec" % FS2_VERSION,
+      "org.http4s" %% "http4s-ember-client" % http4sVersion,
+      "org.http4s" %% "http4s-ember-server" % http4sVersion,
+      "org.http4s" %% "http4s-dsl" % http4sVersion
+    ),
+    Compile / run / fork := true
   )
 
 lazy val fpscala = project
